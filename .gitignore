@@ -1,6 +1,7 @@
 .DS_Store
 DerivedData*/
 Build/
+BuildArtifacts/
 Release/
 ReleaseBuild/
 ReleaseBuild*/
