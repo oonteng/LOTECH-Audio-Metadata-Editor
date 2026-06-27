@@ -120,8 +120,8 @@ struct BatchEditView: View {
             .disabled(!hasDraftChanges || isLoading || isSaving)
         }
         .padding(.horizontal, 28)
-        .padding(.top, 28)
-        .padding(.bottom, 10)
+        .padding(.top, 18)
+        .padding(.bottom, 8)
     }
 
     private var table: some View {
@@ -129,21 +129,25 @@ struct BatchEditView: View {
             if rows.isEmpty {
                 emptyState
             } else {
-                ScrollView([.horizontal, .vertical]) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        headerRow
-                            .background(Color(nsColor: .controlBackgroundColor))
-                        Divider()
+                ScrollView(.vertical) {
+                    ScrollView(.horizontal) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            headerRow
+                                .background(Color(nsColor: .controlBackgroundColor))
+                            Divider()
 
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach($rows) { $row in
-                                dataRow($row)
-                                Divider()
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach($rows) { $row in
+                                    dataRow($row)
+                                    Divider()
+                                }
                             }
                         }
+                        .frame(width: tableWidth, alignment: .topLeading)
                     }
-                    .frame(width: tableWidth, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -153,7 +157,7 @@ struct BatchEditView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 0)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
