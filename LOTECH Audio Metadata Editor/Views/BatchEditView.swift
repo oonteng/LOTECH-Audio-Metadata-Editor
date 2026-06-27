@@ -82,11 +82,11 @@ struct BatchEditView: View {
     @State private var batchEditValue = ""
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             header
             table
-            Spacer(minLength: 0)
         }
+        .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .textBackgroundColor))
     }
@@ -119,9 +119,6 @@ struct BatchEditView: View {
             .buttonStyle(.borderedProminent)
             .disabled(!hasDraftChanges || isLoading || isSaving)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 18)
-        .padding(.bottom, 8)
     }
 
     private var table: some View {
@@ -155,9 +152,6 @@ struct BatchEditView: View {
                 )
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 0)
-        .padding(.bottom, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
