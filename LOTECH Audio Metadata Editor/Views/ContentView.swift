@@ -34,6 +34,7 @@ struct ContentView: View {
                         onDiscard: viewModel.discardBatchChanges,
                         onReload: viewModel.reloadBatchMetadata
                     )
+                    .ignoresSafeArea(.container, edges: .top)
                 }
                 Divider()
                 StatusBarView(message: viewModel.statusMessage)
