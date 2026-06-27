@@ -22,6 +22,7 @@ LOTECH Audio Metadata Editor lets you view and edit common audio metadata such a
 - Genre
 - Comment
 - Artwork, where supported
+- Table-based batch edits for supported files
 
 It is designed to be simple, local, and beginner-friendly.
 
@@ -45,15 +46,15 @@ LOTECH stands for building small, useful technology that solves real everyday pr
 
 The aim is not to create bloated software with every possible option. The aim is to create simple tools that work, remove friction, and help users get things done with less mental load.
 
-This first release keeps the app local and non-AI by design.
+The app keeps metadata editing local and non-AI by design.
 
 Future versions may add optional AI-assisted metadata suggestions, but users will be expected to provide their own AI provider or API key. This project will not hide cloud cost inside a “free” app.
 
 ## Current status
 
-Version: `1.0.0`
+Version: `1.1.0`
 
-This is the first public release.
+The current version adds Batch Edit mode for table-based metadata editing across supported files in an opened folder.
 
 ## Known limitations
 

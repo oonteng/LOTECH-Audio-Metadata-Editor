@@ -68,7 +68,7 @@ struct MetadataEditorView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(metadata.fileName)
                 .font(.title2.weight(.semibold))
-            Text(isEditingEnabled ? "Editable metadata" : "Read-only format in v1.0.0")
+            Text(isEditingEnabled ? "Editable metadata" : "Read-only format in this version")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

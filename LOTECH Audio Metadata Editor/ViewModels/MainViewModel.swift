@@ -6,15 +6,41 @@ import Foundation
 final class MainViewModel: ObservableObject {
     @Published var selectedItemID: AudioLibraryItem.ID? {
         didSet {
+            guard !isRestoringSelection else {
+                return
+            }
+
+            if detailMode == .batchEdit,
+               selectedItemID != nil,
+               hasUnsavedBatchChanges {
+                pendingBatchExitSelectionID = selectedItemID
+                isRestoringSelection = true
+                selectedItemID = oldValue
+                isRestoringSelection = false
+                isShowingBatchExitAlert = true
+                return
+            }
+
+            if selectedItemID != nil {
+                detailMode = .singleFile
+                batchLoadTask?.cancel()
+            }
+
             updateMetadataForSelection()
         }
     }
 
+    @Published private(set) var detailMode: AppDetailMode = .singleFile
     @Published var metadata = AudioMetadata.sample
+    @Published var batchRows: [BatchMetadataRow] = []
+    @Published var selectedBatchRowIDs: Set<BatchMetadataRow.ID> = []
+    @Published var isShowingBatchExitAlert = false
     @Published private(set) var statusMessage = "Ready"
     @Published private(set) var isScanning = false
     @Published private(set) var isReadingMetadata = false
     @Published private(set) var isSavingMetadata = false
+    @Published private(set) var isBatchLoading = false
+    @Published private(set) var isBatchSaving = false
     @Published private(set) var failedMetadataField: EditableMetadataField?
     @Published private(set) var didFailArtworkSave = false
 
@@ -28,14 +54,21 @@ final class MainViewModel: ObservableObject {
     private var folderScanTask: Task<Void, Never>?
     private var metadataReadTask: Task<Void, Never>?
     private var metadataSaveTask: Task<Void, Never>?
+    private var batchLoadTask: Task<Void, Never>?
+    private var batchSaveTask: Task<Void, Never>?
     private var lastSavedMetadata: AudioMetadata?
     private var securityScopedFolderURL: URL?
     private var didStartSecurityScopedFolderAccess = false
+    private var isRestoringSelection = false
+    private var pendingBatchExitSelectionID: AudioLibraryItem.ID?
+    private var shouldLeaveBatchEditWithoutSelection = false
 
     deinit {
         folderScanTask?.cancel()
         metadataReadTask?.cancel()
         metadataSaveTask?.cancel()
+        batchLoadTask?.cancel()
+        batchSaveTask?.cancel()
         MainActor.assumeIsolated {
             stopAccessingCurrentFolder()
         }
@@ -55,6 +88,14 @@ final class MainViewModel: ObservableObject {
         return libraryItems.firstItem(withID: selectedItemID)
     }
 
+    var sidebarLibraryItems: [AudioLibraryItem] {
+        detailMode == .batchEdit ? libraryItems.foldersOnly() : libraryItems
+    }
+
+    var hasUnsavedBatchChanges: Bool {
+        batchRows.contains(where: \.hasDraftChanges)
+    }
+
     func openFolder() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
@@ -72,6 +113,12 @@ final class MainViewModel: ObservableObject {
     }
 
     private func updateMetadataForSelection() {
+        guard detailMode == .singleFile else {
+            metadataReadTask?.cancel()
+            isReadingMetadata = false
+            return
+        }
+
         guard let audioFile = selectedItem?.audioFile else {
             metadataReadTask?.cancel()
             isReadingMetadata = false
@@ -114,6 +161,203 @@ final class MainViewModel: ObservableObject {
         }
     }
 
+    func showBatchEdit() {
+        guard detailMode != .batchEdit else {
+            return
+        }
+
+        detailMode = .batchEdit
+        metadataReadTask?.cancel()
+        selectedItemID = nil
+        failedMetadataField = nil
+        didFailArtworkSave = false
+        prepareBatchRows()
+        loadBatchMetadata()
+    }
+
+    func leaveBatchEdit() {
+        guard detailMode == .batchEdit else {
+            return
+        }
+
+        if hasUnsavedBatchChanges {
+            shouldLeaveBatchEditWithoutSelection = true
+            isShowingBatchExitAlert = true
+            return
+        }
+
+        batchLoadTask?.cancel()
+        detailMode = .singleFile
+        selectedItemID = nil
+        statusMessage = "Ready"
+        updateMetadataForSelection()
+    }
+
+    func reloadBatchMetadata() {
+        prepareBatchRows()
+        loadBatchMetadata()
+    }
+
+    func discardBatchChanges() {
+        batchRows = batchRows.map { row in
+            var updatedRow = row
+            updatedRow.discardDraftChanges()
+            return updatedRow
+        }
+        statusMessage = "Batch changes discarded"
+    }
+
+    func cancelBatchExit() {
+        pendingBatchExitSelectionID = nil
+        shouldLeaveBatchEditWithoutSelection = false
+        isShowingBatchExitAlert = false
+    }
+
+    func discardBatchChangesAndLeave() {
+        discardBatchChanges()
+        leaveBatchEditAfterResolvingDrafts()
+    }
+
+    func saveBatchChangesAndLeave() {
+        saveBatchChanges {
+            self.leaveBatchEditAfterResolvingDrafts()
+        }
+    }
+
+    func saveBatchChanges() {
+        saveBatchChanges(completion: nil)
+    }
+
+    private func saveBatchChanges(completion: (() -> Void)?) {
+        guard hasUnsavedBatchChanges, !isBatchSaving else {
+            completion?()
+            return
+        }
+
+        batchSaveTask?.cancel()
+        isBatchSaving = true
+        statusMessage = "Saving batch changes"
+
+        batchSaveTask = Task {
+            var savedCount = 0
+            var failedCount = 0
+
+            for rowID in batchRows.filter(\.hasDraftChanges).map(\.id) {
+                guard let rowIndex = batchRows.firstIndex(where: { $0.id == rowID }) else {
+                    continue
+                }
+
+                batchRows[rowIndex].status = .saving
+                let row = batchRows[rowIndex]
+
+                do {
+                    try await metadataWriterService.save(metadata: row.metadataForSaving, to: row.audioFile)
+                    let reloadedMetadata = try await metadataReaderService.metadata(for: row.audioFile)
+
+                    guard !Task.isCancelled else {
+                        return
+                    }
+
+                    batchRows[rowIndex].applyLoadedMetadata(reloadedMetadata)
+                    batchRows[rowIndex].status = .saved
+                    savedCount += 1
+                } catch {
+                    guard !Task.isCancelled else {
+                        return
+                    }
+
+                    batchRows[rowIndex].status = .failed(error.localizedDescription)
+                    failedCount += 1
+                }
+            }
+
+            isBatchSaving = false
+
+            if failedCount > 0 {
+                statusMessage = "\(savedCount) saved, \(failedCount) failed"
+            } else {
+                statusMessage = savedCount == 0 ? "No batch changes to save" : "Batch changes saved"
+                completion?()
+            }
+        }
+    }
+
+    private func prepareBatchRows() {
+        batchLoadTask?.cancel()
+        selectedBatchRowIDs = []
+        batchRows = libraryItems.audioFilesForBatchEditing().map(BatchMetadataRow.init(audioFile:))
+
+        if batchRows.isEmpty {
+            statusMessage = "No supported audio files in this folder"
+        } else {
+            statusMessage = "Batch edit ready"
+        }
+    }
+
+    private func loadBatchMetadata() {
+        guard !batchRows.isEmpty else {
+            return
+        }
+
+        batchLoadTask?.cancel()
+        isBatchLoading = true
+        statusMessage = "Loading batch metadata"
+
+        batchLoadTask = Task {
+            for rowID in batchRows.map(\.id) {
+                guard let rowIndex = batchRows.firstIndex(where: { $0.id == rowID }) else {
+                    continue
+                }
+
+                batchRows[rowIndex].status = .loading
+                let audioFile = batchRows[rowIndex].audioFile
+
+                do {
+                    let loadedMetadata = try await metadataReaderService.metadata(for: audioFile)
+
+                    guard !Task.isCancelled else {
+                        return
+                    }
+
+                    batchRows[rowIndex].applyLoadedMetadata(loadedMetadata)
+                } catch {
+                    guard !Task.isCancelled else {
+                        return
+                    }
+
+                    batchRows[rowIndex].status = .failed(error.localizedDescription)
+                }
+            }
+
+            isBatchLoading = false
+            statusMessage = "Batch metadata loaded"
+        }
+    }
+
+    private func leaveBatchEditAfterResolvingDrafts() {
+        if shouldLeaveBatchEditWithoutSelection {
+            shouldLeaveBatchEditWithoutSelection = false
+            pendingBatchExitSelectionID = nil
+            isShowingBatchExitAlert = false
+            batchLoadTask?.cancel()
+            detailMode = .singleFile
+            selectedItemID = nil
+            statusMessage = "Ready"
+            updateMetadataForSelection()
+            return
+        }
+
+        guard let pendingBatchExitSelectionID else {
+            isShowingBatchExitAlert = false
+            return
+        }
+
+        self.pendingBatchExitSelectionID = nil
+        isShowingBatchExitAlert = false
+        detailMode = .singleFile
+        selectedItemID = pendingBatchExitSelectionID
+    }
+
     func commitMetadataField(_ field: EditableMetadataField) {
         if field == .fileName {
             commitFileName()
@@ -127,7 +371,7 @@ final class MainViewModel: ObservableObject {
             metadata.value(for: field) != lastSavedMetadata?.value(for: field)
         else {
             if selectedItem?.audioFile?.supportsMetadataWriting == false {
-                statusMessage = "This file format is read-only in v1.0.0"
+                statusMessage = "This file format is read-only in this version"
             }
             return
         }
@@ -177,7 +421,7 @@ final class MainViewModel: ObservableObject {
             metadata.fileName != lastSavedMetadata?.fileName
         else {
             if selectedItem?.audioFile?.supportsMetadataWriting == false {
-                statusMessage = "This file format is read-only in v1.0.0"
+                statusMessage = "This file format is read-only in this version"
             }
             return
         }
@@ -258,7 +502,7 @@ final class MainViewModel: ObservableObject {
             metadata.artwork != artworkData
         else {
             if selectedItem?.audioFile?.supportsMetadataWriting == false {
-                statusMessage = "This file format is read-only in v1.0.0"
+                statusMessage = "This file format is read-only in this version"
             }
             return
         }
@@ -322,10 +566,16 @@ final class MainViewModel: ObservableObject {
         metadataReadTask?.cancel()
         metadataSaveTask?.cancel()
         folderScanTask?.cancel()
+        batchLoadTask?.cancel()
+        batchSaveTask?.cancel()
         failedMetadataField = nil
         didFailArtworkSave = false
         isReadingMetadata = false
         isSavingMetadata = false
+        isBatchLoading = false
+        isBatchSaving = false
+        batchRows = []
+        selectedBatchRowIDs = []
         isScanning = true
         statusMessage = "Scanning folder"
         let folderBrowserService = FolderBrowserService()
@@ -346,14 +596,18 @@ final class MainViewModel: ObservableObject {
                 selectedItemID = selectAfterLoad
                 lastSavedMetadata = nil
                 isScanning = false
+                if detailMode == .batchEdit {
+                    prepareBatchRows()
+                    loadBatchMetadata()
+                } else {
+                    statusMessage = rootItem.audioFileCount == 0
+                        ? "No supported audio files found"
+                        : "Folder opened"
+                }
 
                 if rememberFolder {
                     try? folderBookmarkService.saveFolder(folderURL)
                 }
-
-                statusMessage = rootItem.audioFileCount == 0
-                    ? "No supported audio files found"
-                    : "Folder opened"
             } catch is CancellationError {
                 return
             } catch {
@@ -390,6 +644,45 @@ final class MainViewModel: ObservableObject {
         securityScopedFolderURL.stopAccessingSecurityScopedResource()
         self.securityScopedFolderURL = nil
         didStartSecurityScopedFolderAccess = false
+    }
+}
+
+private extension Array where Element == AudioLibraryItem {
+    func audioFilesForBatchEditing() -> [AudioFile] {
+        flatMap(\.audioFilesForBatchEditing)
+            .filter(\.supportsMetadataWriting)
+            .sorted { lhs, rhs in
+                lhs.fileName.localizedStandardCompare(rhs.fileName) == .orderedAscending
+            }
+    }
+
+    func foldersOnly() -> [AudioLibraryItem] {
+        compactMap(\.folderOnlyItem)
+    }
+}
+
+private extension AudioLibraryItem {
+    var audioFilesForBatchEditing: [AudioFile] {
+        let childFiles = children?.flatMap(\.audioFilesForBatchEditing) ?? []
+
+        guard let audioFile else {
+            return childFiles
+        }
+
+        return childFiles + [audioFile]
+    }
+
+    var folderOnlyItem: AudioLibraryItem? {
+        guard case .folder = kind else {
+            return nil
+        }
+
+        return AudioLibraryItem(
+            id: id,
+            name: name,
+            kind: kind,
+            children: children?.foldersOnly()
+        )
     }
 }
 

@@ -10,7 +10,7 @@ The app is designed as a local metadata editor. It reads metadata through Apple 
 
 ## Read-Only Formats
 
-Some formats can be scanned and read when macOS can load their metadata, but are treated as read-only in v1.0.0:
+Some formats can be scanned and read when macOS can load their metadata, but are treated as read-only unless a write path is explicitly supported:
 
 - WAV
 - AIFF / AIF
@@ -32,4 +32,4 @@ Known editable metadata atoms are replaced while unrelated metadata is preserved
 
 ## Local-Only Scope
 
-The v1.0.0 app does not include AI metadata generation, cloud sync, online metadata lookup, or hidden provider dependencies.
+The app does not include AI metadata generation, cloud sync, online metadata lookup, or hidden provider dependencies.

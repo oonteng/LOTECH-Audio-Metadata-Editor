@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.1.0
+
+- Added Batch Edit mode.
+- Added a Batch Edit entry above the folder tree in the sidebar.
+- Added a table-based metadata editor for supported writable audio files.
+- Added draft tracking, discard, reload, and save controls for batch edits.
+- Added a prompt before leaving Batch Edit with unsaved changes.
+- Kept v1.0.0 single-file editing behavior intact.
+
 ## 1.0.0
 
 - First public release.
