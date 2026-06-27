@@ -1,8 +1,11 @@
 .DS_Store
-DerivedData/
+DerivedData*/
 Build/
 Release/
 ReleaseBuild/
+ReleaseBuild*/
+Dist*/
+ReleaseArtifacts/
 *.xcuserstate
 *.xcuserdata/
 xcuserdata/
