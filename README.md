@@ -1,96 +1,161 @@
 # LOTECH Audio Metadata Editor
 
-A simple macOS audio metadata editor built for everyday users who want to clean up MP3 ID3 tags without dealing with technical settings.
+A lightweight macOS application for viewing, organizing and editing audio metadata one file or hundreds of files at a time.
 
-This app is part of the **LOTECH** project: small, practical tools built to reduce friction, automate boring work, and help one person operate with more leverage.
+Unlike traditional tag editors that focus on editing one song at a time, LOTECH Audio Metadata Editor provides both a detailed Single Edit view and a spreadsheet-style Batch Edit view, making it practical to clean large music collections quickly.
 
-## Part of the LOTECH family
+This app is part of the **LOTECH** family of practical desktop utilities built to reduce friction and help people get real work done.
 
-This application is part of the LOTECH family of practical software tools.
+---
 
-LOTECH is a growing collection of thoughtfully designed utilities that help people accomplish everyday tasks with less friction. Each tool is intended to be simple, local-first where possible, and useful without unnecessary complexity.
+# Why LOTECH Audio Metadata Editor?
 
-## What it does
+Managing audio metadata should feel like managing a spreadsheet, not opening hundreds of individual dialogs.
 
-LOTECH Audio Metadata Editor lets you view and edit common audio metadata such as:
+LOTECH combines:
+
+- Single-file editing for detailed work
+- Spreadsheet-style batch editing for large collections
+- Local processing with no cloud dependency
+- Clean, beginner-friendly interface
+- Professional metadata handling without exposing technical complexity
+
+---
+
+# Features
+
+## Single Edit
+
+Inspect and edit metadata for an individual audio file.
+
+Supported fields include:
 
 - Title
 - Artist
 - Album
-- Track number
+- Album Artist
+- Track Number
+- Disc Number
 - Year
 - Genre
+- Composer
 - Comment
-- Artwork, where supported
-- Table-based batch edits for supported files
+- Lyrics (where supported)
+- Embedded Artwork
+- File information
 
-It is designed to be simple, local, and beginner-friendly.
+Artwork can be previewed and replaced where supported by the audio format.
 
-## ID3 handling
+---
 
-The app automatically converts older ID3 metadata to **ID3v2** when saving MP3 files.
+## Batch Edit
 
-This is intentional.
+The Batch Edit view is designed for users managing hundreds or thousands of music files.
 
-Many novice users do not know, or should not need to know, the difference between ID3v1, ID3v2.3, ID3v2.4, or other technical tag formats. The app chooses a modern, practical default so users can focus on fixing their music library instead of adjusting technical settings.
+Instead of opening one file after another, metadata is presented in a spreadsheet-style table.
 
-## Supported use
+Supported workflow includes:
 
-This app is intended for personal audio file management.
+- Multi-row selection
+- Batch metadata editing
+- Spreadsheet-style editing
+- Sortable columns
+- Resizable columns
+- Folder-based editing
+- Batch rename
+- Undo / Redo
+- Metadata status tracking
+- Search and filtering
 
-Before batch editing, always keep a backup of important files.
+This dramatically reduces the time required to organize large music libraries.
 
-## LOTECH philosophy
+---
 
-LOTECH stands for building small, useful technology that solves real everyday problems.
+# ID3 Handling
 
-The aim is not to create bloated software with every possible option. The aim is to create simple tools that work, remove friction, and help users get things done with less mental load.
+MP3 files are automatically normalized to **ID3v2** when saved.
 
-The app keeps metadata editing local and non-AI by design.
+Users are not expected to understand differences between ID3v1, ID3v2.3 and ID3v2.4.
 
-Future versions may add optional AI-assisted metadata suggestions, but users will be expected to provide their own AI provider or API key. This project will not hide cloud cost inside a “free” app.
+The application chooses sensible defaults so users can focus on organizing their music instead of learning metadata standards.
 
-## Current status
+---
 
-Version: `1.1.0`
+# Local First
 
-The current version adds Batch Edit mode with sidebar mode tabs, table-based metadata editing, selected-row batch field changes, sortable and resizable columns, and folder-scoped editing.
+All metadata editing happens locally on your Mac.
 
-## Known limitations
+No files are uploaded.
 
-- This app is provided as-is.
-- Not all audio formats support writable metadata.
-- Some readable formats may be treated as read-only.
-- Batch editing should be done carefully.
-- Always test with copied files before editing valuable originals.
+No cloud services are required.
 
-## Developer notes
+Future AI-assisted features will remain optional and require the user to provide their own AI provider or API key.
 
-- [Architecture](docs/Architecture.md)
-- [Metadata handling](docs/Metadata.md)
+---
 
-## Disclaimer
+# LOTECH Philosophy
 
-This software is provided **as-is**, without warranty of any kind.
+LOTECH builds focused desktop tools that solve everyday problems without unnecessary complexity.
 
-The author is not responsible for any data loss, file corruption, metadata damage, loss of artwork, compatibility issues, business loss, or any other direct or indirect damage caused by using this software.
+The goal is not to become another bloated media manager.
 
-Use this app at your own risk.
+The goal is to provide fast, reliable tools that users enjoy opening because they stay out of the way.
 
-Please back up your audio files before editing.
+---
 
-## Roadmap
+# Current Status
 
-Planned future directions:
+Version: **1.1.0**
 
-- Better artwork handling
-- More metadata fields
-- AI Process for metadata suggestions
+Current release includes:
+
+- Single Edit mode
+- Spreadsheet Batch Edit mode
+- Batch rename
+- Artwork editing
+- Undo / Redo
+- Folder-scoped editing
+- ID3v2 normalization
+
+---
+
+# Known Limitations
+
+- Some audio formats expose different writable metadata fields.
+- Not every format supports embedded artwork.
+- Always keep backups before performing large batch edits.
+
+---
+
+# Developer Documentation
+
+- docs/Architecture.md
+- docs/Metadata.md
+
+---
+
+# Roadmap
+
+Future directions include:
+
+- Additional audio formats
+- Smarter artwork management
+- AI-assisted metadata suggestions
 - LOTECH AI SDK integration
-- Optional Council SDK workflow for higher-quality metadata reasoning
+- Council SDK integration
 
-## License
+---
 
-This project is released under the MIT License.
+# License
 
-See `LICENSE` for details.
+Released under the MIT License.
+
+See `LICENSE`.
+
+---
+
+# Disclaimer
+
+This software is provided **as-is**, without warranty.
+
+Always keep backups before editing valuable media collections.
